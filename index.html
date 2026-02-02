@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบเสียงประกาศ - โรงเรียนบ้านบกหนองทันน้ำ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --navy-dark: #0f172a;
+            --navy-panel: rgba(30, 41, 59, 0.9);
+            --sky-bright: #38bdf8;
+            --sky-soft: #e0f2fe;
+            --gold-luxury: #d4af37;
+            --gold-light: #f59e0b;
+            --success: #10b981;
+            --danger: #f43f5e;
+            --gray-cool: #64748b;
+            --minimal-bg: rgba(255, 255, 255, 0.9);
+            --minimal-border: #ffcad4;
+            --minimal-text: #4a4e69;
+            --minimal-shadow: #f4acb7;
+        }
+
+        body {
+            font-family: 'Sarabun', sans-serif;
+            margin: 0; display: flex; height: 100vh;
+            color: var(--navy-dark); overflow: hidden;
+            background-color: black;
+        }
+
+        #video-background {
+            position: fixed;
+            top: 50%; left: 50%;
+            min-width: 100%; min-height: 100%;
+            width: 1920px; height: 1080px;
+            z-index: -1;
+            transform: translate(-50%, -50%);
+            object-fit: cover;
+        }
+
+        .video-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.25);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .main-content { 
+            flex: 1; 
+            padding: 0px 40px 120px 40px; 
+            overflow-y: auto; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            z-index: 1; 
+        }
+
+        .header-wrapper { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            width: 100%; 
+            margin: -30px 0 -15px 0; 
+            animation: slideIn 0.8s ease-out; 
+        }
+
+        .logo-center { 
+            width: 750px; 
+            max-width: 90%; 
+            height: auto; 
+            max-height: 300px;
+            object-fit: contain; 
+            filter: drop-shadow(0 0 15px rgba(56, 189, 248, 0.5)) drop-shadow(0 5px 5px rgba(0,0,0,0.4));
+            transition: transform 0.3s ease;
+        }
+        
+        .logo-center:hover { transform: scale(1.01); }
+
+        .main-controls-wrapper { 
+            display: flex; 
+            align-items: center; 
+            gap: 20px; 
+            margin-bottom: 25px; 
+            background: rgba(255,255,255,0.1); 
+            padding: 12px 30px;
+            border-radius: 50px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        button { transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275); outline: none; border: none; cursor: pointer; }
+        button:active { transform: scale(0.9) !important; }
+
+        #auto-btn { padding: 12px 35px; font-size: 1.1em; font-weight: 800; border-radius: 12px; color: white; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .btn-quick-action { padding: 12px 25px; font-size: 1em; font-weight: 800; border-radius: 12px; color: white; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .btn-open { background: var(--success); }
+        .btn-close { background: var(--gray-cool); }
+
+        .special-actions-area {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+            width: 100%;
+            max-width: 1100px;
+        }
+        .btn-special {
+            flex: 1;
+            padding: 18px;
+            font-size: 1.2em;
+            font-weight: 800;
+            border-radius: 15px;
+            color: white;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+        .btn-purple { background: linear-gradient(135deg, #a855f7, #7e22ce); }
+        .btn-orange { background: linear-gradient(135deg, #f97316, #ea580c); }
+
+        .clock-container {
+            position: absolute; top: 20px; left: 20px;
+            background: var(--minimal-bg); color: var(--minimal-text);
+            padding: 10px 20px; border-radius: 20px;
+            border: 2px solid var(--minimal-border);
+            box-shadow: 5px 5px 0px var(--minimal-shadow);
+            z-index: 10; min-width: 200px; text-align: center;
+        }
+        #current-date { font-size: 0.8em; color: #9a8c98; font-weight: 700; margin-bottom: 2px; }
+        #current-time { font-size: 2.2em; font-weight: 800; line-height: 1; }
+
+        .youtube-link-box {
+            position: absolute; 
+            top: 135px; 
+            left: 20px;
+            width: 100px; 
+            background: var(--minimal-bg);
+            padding: 8px;
+            border-radius: 12px;
+            border: 2px solid var(--minimal-border);
+            box-shadow: 3px 3px 0px var(--minimal-shadow);
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .youtube-link-box:hover { transform: scale(1.1) translateY(-2px); }
+        .youtube-img { width: 100%; height: auto; display: block; }
+
+        .logo-dev-container {
+            position: fixed;
+            bottom: 25px;
+            left: 20px;
+            z-index: 1000;
+            pointer-events: none;
+            display: flex;
+            align-items: center; 
+            gap: 15px;
+        }
+
+        .logo-dev {
+            width: 200px;
+            height: auto;
+            filter: drop-shadow(3px 3px 8px rgba(0,0,0,0.6));
+        }
+
+        .logo-newbok-container {
+            position: fixed;
+            bottom: 25px;
+            right: 440px; /* ขยับจากขวาเพื่อให้พ้น Side Panel */
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        .logo-newbok {
+            height: 70px;
+            width: auto;
+            filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.3));
+        }
+
+        .schedule-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 15px; width: 100%; max-width: 1100px; }
+        .time-card {
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(8px);
+            padding: 20px; border-radius: 15px; border-left: 8px solid var(--sky-bright);
+            display: flex; justify-content: space-between; align-items: center; transition: 0.3s ease;
+        }
+        .time-card:hover { transform: translateY(-3px); background: white; }
+        .time-text { font-size: 2.2em; font-weight: 800; }
+        .msg-text { font-size: 1em; font-weight: 700; color: var(--navy-panel); }
+        .btn-play { background: var(--navy-dark); color: var(--sky-bright); border: 1px solid var(--sky-bright); padding: 8px 18px; border-radius: 8px; font-weight: 800; }
+
+        .side-panel { width: 420px; background: var(--navy-panel); backdrop-filter: blur(10px); color: white; display: flex; flex-direction: column; height: 100vh; z-index: 200; }
+        .panel-section { padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .panel-title { font-weight: 800; font-size: 0.85em; color: var(--gold-luxury); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px; display: block; }
+        
+        .extra-sounds-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+        .btn-extra { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1; padding: 10px; border-radius: 8px; font-size: 0.8em; text-align: left; }
+        .btn-extra.active { border-color: var(--gold-luxury); background: rgba(212, 175, 55, 0.4); color: white; font-weight: bold; }
+        
+        #log-container { 
+            flex-grow: 1; 
+            overflow-y: auto; 
+            padding: 15px; 
+            background: rgba(0,0,0,0.3); 
+            display: flex; 
+            flex-direction: column;
+            gap: 8px;
+        }
+        .log-item { 
+            padding: 10px; 
+            background: rgba(255,255,255,0.07); 
+            border-left: 4px solid var(--sky-bright);
+            border-radius: 0 8px 8px 0; 
+            font-size: 0.85em; 
+            animation: fadeIn 0.3s ease;
+        }
+        .log-item strong { color: var(--gold-light); }
+
+        .footer-school-box {
+            position: fixed; bottom: 20px; left: calc(50% - 210px); transform: translateX(-50%);
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);
+            padding: 15px 30px; border-radius: 25px; border: 2px solid var(--sky-bright);
+            display: flex; align-items: center; gap: 20px; z-index: 100; min-width: 650px;
+        }
+        .footer-logo { width: 70px; height: auto; }
+
+        .gif-decoration {
+            position: fixed; bottom: 110px; right: 440px;  
+            width: 250px; height: auto; z-index: 50; pointer-events: none;
+            background: rgba(255,255,255,0.2); border-radius: 15px; overflow: hidden;
+            border: 3px solid #ffffff;
+        }
+        .gif-item { display: none; animation: fadeIn 0.8s ease-in-out; }
+        .gif-item.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <video id="video-background" autoplay muted playsinline></video>
+    <div class="video-overlay"></div>
+
+    <div class="logo-dev-container">
+        <img src="LOGO/DEV.png" alt="DEV" class="logo-dev">
+    </div>
+
+    <div class="logo-newbok-container">
+        <img src="LOGO/NEWBOK.png" alt="NEWBOK" class="logo-newbok">
+    </div>
+
+    <div class="clock-container">
+        <div id="current-date">วัน...ที่ ... ... พ.ศ. ...</div>
+        <div id="current-time">00:00:00</div>
+    </div>
+
+    <a href="https://www.youtube.com/" target="_blank" class="youtube-link-box">
+        <img src="LOGO/Youtube_logo.png" alt="YouTube" class="youtube-img">
+    </a>
+
+    <div class="gif-decoration" id="gif-rotator">
+        <div class="gif-item active"><div class="tenor-gif-embed" data-postid="17749548473669368791" data-share-method="host" data-aspect-ratio="1.80435" data-width="100%"><a href="https://tenor.com/view/demon-slayer-trio-dancing-gif-demon-slayer-characters-gif-17749548473669368791"></a></div></div>
+        <div class="gif-item"><div class="tenor-gif-embed" data-postid="8044902412848222591" data-share-method="host" data-aspect-ratio="1.76596" data-width="100%"><a href="https://tenor.com/view/akaza-tanjiro-infinity-castle-demon-slayer-gif-8044902412848222591"></a></div></div>
+        <div class="gif-item"><div class="tenor-gif-embed" data-postid="13870199096024309264" data-share-method="host" data-aspect-ratio="3.41096" data-width="100%"><a href="https://tenor.com/view/syetangsame-gif-13870199096024309264"></a></div></div>
+        <div class="gif-item"><div class="tenor-gif-embed" data-postid="3274393823428515980" data-share-method="host" data-aspect-ratio="1.76596" data-width="100%"><a href="https://tenor.com/view/demon-slayer-inosuke-infinity-castle-hashira-hashira-training-gif-3274393823428515980"></a></div></div>
+        <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+    </div>
+
+    <div class="main-content">
+        <div class="header-wrapper">
+            <img src="LOGO/logocenter.png" class="logo-center" alt="Main Header Logo">
+        </div>
+
+        <div class="main-controls-wrapper">
+            <button class="btn-quick-action btn-open" onclick="playOpenAnnounce()">📢 เปิดประกาศ</button>
+            <button id="auto-btn" onclick="toggleAuto()" style="background: var(--danger);">
+                <span id="status-dot">●</span> ระบบอัตโนมัติ: ปิดอยู่
+            </button>
+            <button class="btn-quick-action btn-close" onclick="stopAndPlayClose()">🔇 ปิดประกาศ</button>
+        </div>
+
+        <div class="schedule-grid" id="schedule"></div>
+
+        <div class="special-actions-area">
+            <button class="btn-special btn-purple" onclick="playAnnounceManual('Sound_time/15_30_NO.mp3', 'ประกาศพิเศษ: ไม่ต้องเข้าแถว (เลิกเรียน)')">
+                📢 ไม่ต้องเข้าแถว (เลิกเรียน)
+            </button>
+            <button class="btn-special btn-orange" onclick="playAnnounceManual('Sound_time/15_30_YES.mp3', 'ประกาศพิเศษ: เข้าแถว (เลิกเรียน)')">
+                ✅ เข้าแถว (เลิกเรียน)
+            </button>
+        </div>
+    </div>
+
+    <div class="footer-school-box">
+        <img src="LOGO/logo1.png" class="footer-logo">
+        <div style="flex:1; text-align:center;">
+            <h1 class="school-name-footer" style="color:white; margin:0; font-size:1.8em;">โรงเรียนบ้านบกหนองทันน้ำ</h1>
+            <p style="color:var(--sky-bright); margin:0; font-size:0.9em;">สังกัดสำนักงานเขตพื้นที่การศึกษาประถมศึกษาอุบลราชธานี เขต 2</p>
+        </div>
+        <img src="LOGO/logo2.png" class="footer-logo">
+    </div>
+
+    <div class="side-panel">
+        <div class="panel-section">
+            <span class="panel-title">🔊 เสียงเพิ่มเติม (เช้า 07:30 / เย็น 15:30)</span>
+            <div class="extra-sounds-grid" id="extra-list"></div>
+            <button onclick="randomSound()" style="width:100%; padding:12px; background:var(--gold-luxury); border-radius:10px; font-weight:800; margin-bottom:10px;">🎲 สุ่มเลือกเสียง</button>
+            <div style="display:flex; gap:10px;">
+                <button onclick="playSelectedExtra()" style="flex:2; padding:12px; background:transparent; color:white; border:2px solid var(--gold-luxury); border-radius:12px; font-weight:bold;">▶️ ทดสอบ</button>
+                <button onclick="stopAllSounds()" style="flex:1; padding:12px; background:var(--danger); color:white; border-radius:12px; font-weight:bold;">🛑 STOP</button>
+            </div>
+        </div>
+        
+        <div class="log-header" style="padding: 10px 20px;">
+            <span class="panel-title" style="margin:0;">📝 รายงานสถานะ</span>
+            <button onclick="document.getElementById('log-container').innerHTML=''" style="background:transparent; color:var(--gray-cool); font-size:0.7em; cursor:pointer;">ล้างประวัติ</button>
+        </div>
+        <div id="log-container"></div>
+
+        <div class="panel-section">
+            <span class="panel-title">Master Control</span>
+            <button onclick="playChimeOnly()" style="width:100%; padding:12px; background:transparent; color:white; border:2px solid var(--gold-luxury); border-radius:12px; font-weight:bold;">🔔 ทดสอบระบบ</button>
+        </div>
+        <div class="panel-section">
+            <button style="width:100%; padding:15px; background:rgba(244, 63, 94, 0.1); color:var(--danger); border:1px solid var(--danger); border-radius:10px; font-weight:bold;" onclick="exitProgram()">✕ ปิดระบบประกาศ</button>
+        </div>
+    </div>
+
+    <script>
+        const LINE_API_URL = "https://script.google.com/macros/s/AKfycbz9Ftvr1rHozdSeLt_bi_HxjSTQf8v_L2iO1EpY0ZTyBbA3RK4YnEAQd6JFfH8vlfVpuw/exec";
+        const videoList = ["Video_rayshow/luffy1.mp4","Video_rayshow/luffy2.mp4","Video_rayshow/luffy3.mp4","Video_rayshow/luffy4.mp4","Video_rayshow/luffy5.mp4","Video_rayshow/luffy6.mp4"];
+        let currentVideoIndex = 0;
+
+        // อัปเดตรายการไฟล์เสียงตามที่คุณแจ้ง
+        const scheduleData = [
+            { time: "07:30", msg: "เข้าเขตพื้นที่รับผิดชอบ", file: "Sound_time/07_30.mp3" },
+            { time: "07:55", msg: "เตรียมตัวเข้าแถวเคารพธงชาติ", file: "Sound_time/07_55.mp3" },
+            { time: "08:30", msg: "เข้าเรียนคาบที่ 1", file: "Sound_time/08_30.mp3" },
+            { time: "09:30", msg: "หมดเวลาเรียนคาบที่ 1", file: "Sound_time/09_30.mp3" },
+            { time: "10:30", msg: "หมดเวลาเรียนคาบที่ 2", file: "Sound_time/10_30.mp3" },
+            { time: "11:30", msg: "พักรับประทานอาหารกลางวัน", file: "Sound_time/11_30.mp3" },
+            { time: "12:30", msg: "เตรียมเข้าเรียนช่วงบ่าย", file: "Sound_time/12_30.mp3" },
+            { time: "13:30", msg: "หมดเวลาเรียนคาบที่ 4", file: "Sound_time/13_30.mp3" },
+            { time: "14:30", msg: "หมดเวลาเรียนคาบที่ 5", file: "Sound_time/14_30.mp3" },
+            { time: "15:30", msg: "เลิกเรียน", file: "Sound_time/15_30.mp3" }
+        ];
+
+        const extraSounds = [
+            { name: "1. Squid Game S2", file: "Sound_nocut/squid_game_season2.mp3" },
+            { name: "2. One Piece", file: "Sound_nocut/onepice_2open.mp3" },
+            { name: "3. One Piece Yoho", file: "Sound_nocut/onepice_1yohoho.mp3" },
+            { name: "4. Bling Bang Bang", file: "Sound_nocut/bling_bang_bang_born.mp3" },
+            { name: "5. Snell Phone", file: "Sound_nocut/onepiceSnell_Phone.mp3" },
+            { name: "6. HP Minions", file: "Sound_nocut/harry_potter_minions.mp3" },
+            { name: "7. Star Hunlay", file: "Sound_nocut/Star_hunlay.mp3" },
+            { name: "8. Muay Thai Pee", file: "Sound_nocut/Muaythaipee.mp3" },
+            { name: "9. Doraemon", file: "Sound_nocut/doraemon.mp3" },
+            { name: "10. Minion Remix", file: "Sound_nocut/minion_banana_remix.mp3" }
+        ];
+
+        let isAuto = false;
+        let selectedExtraIndex = 0;
+        let currentAudio = null;
+        let fxAudio = null;
+        const FULL_VOLUME = 1.0; 
+
+        function init() {
+            initVideoPlayer();
+            const container = document.getElementById('schedule');
+            container.innerHTML = ""; 
+            scheduleData.forEach((item, index) => {
+                setTimeout(() => {
+                    container.innerHTML += `
+                        <div class="time-card" style="animation: slideIn 0.5s ease-out forwards">
+                            <div><div class="time-text">${item.time}</div><div class="msg-text">${item.msg}</div></div>
+                            <button class="btn-play" onclick="playAnnounce('${item.file}', '${item.msg}', false)">PLAY</button>
+                        </div>`;
+                }, index * 60);
+            });
+            const extraContainer = document.getElementById('extra-list');
+            extraContainer.innerHTML = ""; 
+            extraSounds.forEach((sound, idx) => {
+                extraContainer.innerHTML += `<button class="btn-extra ${idx === 0 ? 'active' : ''}" id="extra-${idx}" onclick="selectExtra(${idx})">${sound.name}</button>`;
+            });
+            setInterval(updateClock, 1000);
+            startGifRotation();
+            addLog("🚀 ระบบพร้อมใช้งาน");
+        }
+
+        function initVideoPlayer() {
+            const video = document.getElementById('video-background');
+            video.src = videoList[currentVideoIndex];
+            video.onended = () => {
+                currentVideoIndex = (currentVideoIndex + 1) % videoList.length;
+                video.src = videoList[currentVideoIndex];
+                video.play();
+            };
+            video.play().catch(e => { addLog("⚠️ คลิกหน้าจอเพื่อเริ่มวิดีโอ"); });
+        }
+
+        function startGifRotation() {
+            const items = document.querySelectorAll('.gif-item');
+            let index = 0;
+            setInterval(() => {
+                items[index].classList.remove('active');
+                index = (index + 1) % items.length;
+                items[index].classList.add('active');
+            }, 8000);
+        }
+
+        function updateClock() {
+            const now = new Date();
+            const offsetTime = new Date(now.getTime() + 30000); 
+            const days = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
+            const months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+            const realHours = String(now.getHours()).padStart(2, '0');
+            const realMinutes = String(now.getMinutes()).padStart(2, '0');
+            const realSeconds = String(now.getSeconds()).padStart(2, '0');
+            
+            document.getElementById('current-date').innerText = `วัน${days[now.getDay()]}ที่ ${now.getDate()} ${months[now.getMonth()]} พ.ศ. ${now.getFullYear() + 543}`;
+            document.getElementById('current-time').innerText = `${realHours}:${realMinutes}:${realSeconds}`;
+
+            if (isAuto) {
+                const offHours = String(offsetTime.getHours()).padStart(2, '0');
+                const offMinutes = String(offsetTime.getMinutes()).padStart(2, '0');
+                const offSeconds = String(offsetTime.getSeconds()).padStart(2, '0');
+                const compareTimeStr = `${offHours}:${offMinutes}`;
+
+                if (offSeconds === "00") {
+                    const task = scheduleData.find(t => t.time === compareTimeStr);
+                    if (task) {
+                        if (compareTimeStr === "15:30" || compareTimeStr === "07:30") { 
+                            playDismissAuto(task.file, task.msg); 
+                        } 
+                        else { 
+                            playAnnounce(task.file, task.msg, true); 
+                        }
+                    }
+                }
+            }
+        }
+
+        async function playDismissAuto(dismissFile, message) {
+            stopAllSounds(); 
+            addLog(`🔔 อัตโนมัติ: ${message} (เริ่มก่อน 30 วิ)`);
+            try {
+                currentAudio = new Audio(dismissFile);
+                currentAudio.volume = FULL_VOLUME;
+                currentAudio.play();
+                currentAudio.onended = () => {
+                    const extra = extraSounds[selectedExtraIndex];
+                    currentAudio = new Audio(extra.file);
+                    currentAudio.volume = FULL_VOLUME; 
+                    currentAudio.play();
+                    addLog(`🎵 เล่นเพลงส่งท้าย: ${extra.name}`);
+                };
+                sendLineReport(message + " (ล่วงหน้า 30 วิ)");
+            } catch (e) { console.error(e); }
+        }
+
+        async function playAnnounce(fileName, message, isAutoTrigger = false) {
+            stopAllSounds(); 
+            addLog(`🔔 ${isAutoTrigger ? 'อัตโนมัติ' : 'ประกาศ'}: ${message}`);
+            try {
+                currentAudio = new Audio(fileName); 
+                currentAudio.volume = FULL_VOLUME;
+                currentAudio.play(); 
+                if(isAutoTrigger) sendLineReport(message + " (ล่วงหน้า 30 วิ)");
+            } catch (e) { console.error(e); }
+        }
+
+        function toggleAuto() {
+            isAuto = !isAuto;
+            const btn = document.getElementById('auto-btn');
+            btn.innerHTML = isAuto ? "<span>●</span> ระบบอัตโนมัติ: ทำงาน" : "<span>●</span> ระบบอัตโนมัติ: ปิด";
+            btn.style.background = isAuto ? "var(--success)" : "var(--danger)";
+            addLog(isAuto ? "✅ เปิดระบบอัตโนมัติ" : "❌ ปิดระบบอัตโนมัติ");
+        }
+
+        function playAnnounceManual(file, msg) { 
+            stopAllSounds(); 
+            addLog(`▶️ เล่นเสียง: ${msg}`);
+            currentAudio = new Audio(file);
+            currentAudio.volume = FULL_VOLUME; 
+            currentAudio.play();
+        }
+
+        function playOpenAnnounce() { 
+            stopAllSounds(); 
+            fxAudio = new Audio('SoundFX/TING1_OPEN.mp3'); 
+            fxAudio.volume = FULL_VOLUME;
+            fxAudio.play(); 
+            addLog("📢 เปิดประกาศ"); 
+        }
+
+        function stopAndPlayClose() { 
+            stopAllSounds(); 
+            fxAudio = new Audio('SoundFX/TING2_CLOS.mp3'); 
+            fxAudio.volume = FULL_VOLUME;
+            fxAudio.play(); 
+            addLog("🔇 ปิดประกาศ"); 
+        }
+        
+        function stopAllSounds() { 
+            if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; } 
+            if (fxAudio) { fxAudio.pause(); fxAudio.currentTime = 0; } 
+        }
+
+        function selectExtra(index) { 
+            selectedExtraIndex = index; 
+            document.querySelectorAll('.btn-extra').forEach(btn => btn.classList.remove('active')); 
+            document.getElementById(`extra-${index}`).classList.add('active'); 
+        }
+
+        function randomSound() { 
+            const idx = Math.floor(Math.random() * extraSounds.length); 
+            selectExtra(idx); 
+            addLog("🎲 สุ่มเลือกเพลงส่งท้าย"); 
+        }
+        
+        function playSelectedExtra() { 
+            stopAllSounds(); 
+            const extra = extraSounds[selectedExtraIndex]; 
+            currentAudio = new Audio(extra.file); 
+            currentAudio.volume = FULL_VOLUME; 
+            currentAudio.play(); 
+            addLog(`▶️ ทดสอบเพลง: ${extra.name}`); 
+        }
+
+        function playChimeOnly() { 
+            stopAllSounds(); 
+            currentAudio = new Audio('Sound_nocut/Ratthabaan.mp3'); 
+            currentAudio.volume = FULL_VOLUME;
+            currentAudio.play(); 
+            addLog("🔔 ทดสอบระบบ"); 
+            sendLineReport("ทดสอบปกติ ✅"); 
+        }
+        
+        function addLog(text) { 
+            const container = document.getElementById('log-container'); 
+            const time = new Date().toLocaleTimeString('th-TH'); 
+            container.insertAdjacentHTML('afterbegin', `<div class="log-item"><strong>${time}</strong><br>${text}</div>`); 
+        }
+
+        function sendLineReport(message) { fetch(`${LINE_API_URL}?msg=${encodeURIComponent('🏫 รร.บ้านบกฯ: ' + message)}`, { mode: 'no-cors' }); }
+        function exitProgram() { if (confirm("ยืนยันการปิดระบบ?")) { window.close(); } }
+        window.onload = init;
+    </script>
+</body>
+</html>
